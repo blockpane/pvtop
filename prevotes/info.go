@@ -51,8 +51,8 @@ func GetValNames(addr string) *ValNames {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer resp.Body.Close()
 		r, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -86,8 +86,8 @@ func GetValNames(addr string) *ValNames {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer resp.Body.Close()
 		r, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -127,6 +127,9 @@ func GetValNames(addr string) *ValNames {
 			log.Fatal(e)
 		}
 		valsResult, e := client.ABCIQuery(context.Background(), "/cosmos.staking.v1beta1.Query/Validators", q)
+		if e != nil {
+			log.Fatal(e)
+		}
 		if len(valsResult.Response.Value) > 0 {
 			valsResp := staketypes.QueryValidatorsResponse{}
 			e = valsResp.Unmarshal(valsResult.Response.Value)
@@ -136,6 +139,9 @@ func GetValNames(addr string) *ValNames {
 			for _, val := range valsResp.Validators {
 				annoyed := make(map[string]interface{})
 				e = yaml.Unmarshal([]byte(val.String()), &annoyed)
+				if e != nil {
+					log.Fatal(e)
+				}
 				i := v.getByKey(annoyed["consensus_pubkey"].(map[string]interface{})["key"].(string))
 				v.setIndex(i, strings.TrimSpace(val.Description.Moniker))
 			}
@@ -202,17 +208,6 @@ func (v *ValNames) GetInfo(index int) string {
 
 	}
 	return fmt.Sprintf("%-3d %-.2f%%   %-20s ", index+1, v.getPower(index)*100.0, moniker)
-}
-
-type rpcReq struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      int    `json:"id"`
-	Method  string `json:"method"`
-	Params  struct {
-		//Height  string `json:"height"`
-		Page    string `json:"page"`
-		PerPage string `json:"per_page"`
-	} `json:"params"`
 }
 
 type rpcValidatorsResp struct {

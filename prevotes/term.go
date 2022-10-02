@@ -9,11 +9,10 @@ import (
 	"time"
 )
 
-func DrawScreen(network string, voteChan chan []VoteState, pctChan chan float64, SummaryChan chan string) {
+func DrawScreen(network string, voteChan chan []VoteState, pctChan chan float64, summaryChan chan string) {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
-	defer ui.Close()
 	pctGuage := widgets.NewGauge()
 
 	p := widgets.NewParagraph()
@@ -86,7 +85,7 @@ func DrawScreen(network string, voteChan chan []VoteState, pctChan chan float64,
 			refresh = true
 			pctGuage.Percent = int(pct * 100)
 
-		case summary := <-SummaryChan:
+		case summary := <-summaryChan:
 			refresh = true
 			p.Text = summary
 
