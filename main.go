@@ -38,7 +38,8 @@ func main() {
 	for range tick.C {
 		votes, pct, hrs, dur, e := prevotes.GetPreVotes(os.Args[1], v)
 		if e != nil {
-			log.Fatal(e)
+			SummaryChan <- e.Error()
+			continue
 		}
 		if dur < 0 {
 			dur = 0
