@@ -32,9 +32,7 @@ type ValNames struct {
 	power  map[int]float64
 }
 
-func GetValNames(addr string) *ValNames {
-	addr = strings.Replace(addr, "tcp://", "http://", 1)
-	httpAddr := strings.TrimRight(addr, "/")
+func GetValNames(addr *RPCAddress) *ValNames {
 	v := &ValNames{
 		key:    make(map[string]int),
 		indice: make(map[int]string),
@@ -47,7 +45,7 @@ func GetValNames(addr string) *ValNames {
 	more := true
 
 	for more {
-		resp, err := http.Get(httpAddr + "/validators?per_page=" + strconv.Itoa(perPage) + "&page=" + strconv.Itoa(page))
+		resp, err := http.Get(addr.HTTPRoute(fmt.Sprintf("/validators?per_page=%d&page=%d", perPage, page)))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -82,7 +80,7 @@ func GetValNames(addr string) *ValNames {
 
 	// do it again, but get the % of voting power
 	for more {
-		resp, err := http.Get(httpAddr + "/validators?per_page=" + strconv.Itoa(perPage) + "&page=" + strconv.Itoa(page))
+		resp, err := http.Get(addr.HTTPRoute(fmt.Sprintf("/validators?per_page=%d&page=%d", perPage, page)))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -110,7 +108,7 @@ func GetValNames(addr string) *ValNames {
 		}
 	}
 
-	client, err := rpchttp.New(addr, "/websocket")
+	client, err := rpchttp.New(addr.HTTPRoute(""), "/websocket")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -229,9 +227,9 @@ type status struct {
 	} `json:"result"`
 }
 
-func GetNetworkName(addr string) (string, error) {
-	addr = strings.TrimRight(strings.Replace(addr, "tcp://", "http://", 1), "/")
-	resp, err := http.Get(addr + "/status")
+func GetNetworkName(addr *RPCAddress) (string, error) {
+	route := addr.HTTPRoute("status")
+	resp, err := http.Get(route)
 	if err != nil {
 		return "", err
 	}
