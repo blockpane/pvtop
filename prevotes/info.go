@@ -47,17 +47,20 @@ func GetValNames(addr *RPCAddress) *ValNames {
 	for more {
 		resp, err := http.Get(addr.HTTPRoute(fmt.Sprintf("/validators?per_page=%d&page=%d", perPage, page)))
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 		r, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 		valResp := &rpcValidatorsResp{}
 		err = json.Unmarshal(r, valResp)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 
 		for _, val := range valResp.Result.Validators {
@@ -82,17 +85,20 @@ func GetValNames(addr *RPCAddress) *ValNames {
 	for more {
 		resp, err := http.Get(addr.HTTPRoute(fmt.Sprintf("/validators?per_page=%d&page=%d", perPage, page)))
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 		r, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 		valResp := &rpcValidatorsResp{}
 		err = json.Unmarshal(r, valResp)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
 
 		for _, val := range valResp.Result.Validators {
@@ -122,23 +128,27 @@ func GetValNames(addr *RPCAddress) *ValNames {
 		}
 		q, e := valsQuery.Marshal()
 		if e != nil {
-			log.Fatal(e)
+			log.Println(e)
+			continue
 		}
 		valsResult, e := client.ABCIQuery(context.Background(), "/cosmos.staking.v1beta1.Query/Validators", q)
 		if e != nil {
-			log.Fatal(e)
+			log.Println(e)
+			continue
 		}
 		if len(valsResult.Response.Value) > 0 {
 			valsResp := staketypes.QueryValidatorsResponse{}
 			e = valsResp.Unmarshal(valsResult.Response.Value)
 			if e != nil {
-				log.Fatal(e)
+				log.Println(e)
+				continue
 			}
 			for _, val := range valsResp.Validators {
 				annoyed := make(map[string]interface{})
 				e = yaml.Unmarshal([]byte(val.String()), &annoyed)
 				if e != nil {
-					log.Fatal(e)
+					log.Println(e)
+					continue
 				}
 				i := v.getByKey(annoyed["consensus_pubkey"].(map[string]interface{})["key"].(string))
 				v.setIndex(i, strings.TrimSpace(val.Description.Moniker))
