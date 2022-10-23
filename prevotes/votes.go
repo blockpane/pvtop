@@ -54,10 +54,9 @@ type VoteState struct {
 	Voted       bool
 }
 
-func GetPreVotes(url string, names *ValNames) (votes []VoteState, percent float64, hrs string, dur time.Duration, err error) {
+func GetPreVotes(url *RPCAddress, names *ValNames) (votes []VoteState, percent float64, hrs string, dur time.Duration, err error) {
 	votes = make([]VoteState, 0)
-	url = strings.TrimRight(strings.ReplaceAll(url, "tcp://", "http://"), "/")
-	resp, err := http.Get(url + "/consensus_state")
+	resp, err := http.Get(url.HTTPRoute("/consensus_state"))
 	if err != nil {
 		return nil, 0, "", 0, err
 	}

@@ -17,13 +17,18 @@ func main() {
 		log.Fatal("please provide an rpc endpoint as the only argument")
 	}
 
-	networkName, err := prevotes.GetNetworkName(os.Args[1])
+	parsedAddress, err := prevotes.NewRPCAddress(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	networkName, err := prevotes.GetNetworkName(parsedAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println("Please wait, getting validator information....")
-	v := prevotes.GetValNames(os.Args[1])
+	v := prevotes.GetValNames(parsedAddress)
 	if v == nil {
 		log.Fatal("no validators found")
 	}
@@ -36,7 +41,7 @@ func main() {
 
 	tick := time.NewTicker(refreshRate)
 	for range tick.C {
-		votes, pct, hrs, dur, e := prevotes.GetPreVotes(os.Args[1], v)
+		votes, pct, hrs, dur, e := prevotes.GetPreVotes(parsedAddress, v)
 		if e != nil {
 			SummaryChan <- e.Error()
 			continue
