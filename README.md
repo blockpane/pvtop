@@ -15,5 +15,7 @@ pvtop tcp://localhost:26657
 ## Install
 
 ```
-go install github.com/blockpane/pvtop
+git clone https://github.com/blockpane/pvtop
+cd pvtop
+go install ./...
 ```
