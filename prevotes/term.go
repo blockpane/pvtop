@@ -9,11 +9,12 @@ import (
 	"time"
 )
 
-func DrawScreen(network string, voteChan chan []VoteState, pctChan chan float64, summaryChan chan string) {
+func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPctChan chan float64, summaryChan chan string) {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
-	pctGuage := widgets.NewGauge()
+	votePctGauge := widgets.NewGauge()
+	commitPctGauge := widgets.NewGauge()
 
 	p := widgets.NewParagraph()
 	p.Title = network
@@ -29,8 +30,9 @@ func DrawScreen(network string, voteChan chan []VoteState, pctChan chan float64,
 
 	grid.Set(
 		ui.NewRow(0.1,
-			ui.NewCol(1.0/2, p),
-			ui.NewCol(1.0/2, pctGuage),
+			ui.NewCol(1.0/3, p),
+			ui.NewCol(1.0/3, votePctGauge),
+			ui.NewCol(1.0/3, commitPctGauge),
 		),
 		ui.NewRow(0.9,
 			ui.NewCol(.9/3, lists[0]),
@@ -73,17 +75,25 @@ func DrawScreen(network string, voteChan chan []VoteState, pctChan chan float64,
 			for i := 0; i < max; i++ {
 				lists[i].Rows = make([]string, len(split[i]))
 				for j, voter := range split[i] {
-					missing := "❌"
+					vmissing := "❌"
 					if voter.Voted {
-						missing = "✅"
+						vmissing = "✅"
 					}
-					lists[i].Rows[j] = fmt.Sprintf("%-3s %s", missing, voter.Description)
+					cmissing := "❌"
+					if voter.Committed {
+						cmissing = "✅"
+					}
+					lists[i].Rows[j] = fmt.Sprintf("%-3s %-3s %s", vmissing, cmissing, voter.Description)
 				}
 			}
 
-		case pct := <-pctChan:
+		case pct := <-votePctChan:
 			refresh = true
-			pctGuage.Percent = int(pct * 100)
+			votePctGauge.Percent = int(pct * 100)
+
+		case pct := <-commitPctChan:
+			refresh = true
+			commitPctGauge.Percent = int(pct * 100)
 
 		case summary := <-summaryChan:
 			refresh = true

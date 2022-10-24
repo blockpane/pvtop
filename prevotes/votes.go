@@ -11,8 +11,10 @@ import (
 )
 
 type Hvs struct {
-	Prevotes         []string `json:"prevotes"`
-	PreVotesBitArray string   `json:"prevotes_bit_array"`
+	Prevotes           []string `json:"prevotes"`
+	Precommits         []string `json:"precommits"`
+	PreVotesBitArray   string   `json:"prevotes_bit_array"`
+	PreCommitsBitArray string   `json:"precommits_bit_array"`
 }
 
 type conState struct {
@@ -37,8 +39,20 @@ func (cs *conState) getRound() (int, error) {
 	return r, nil
 }
 
-func (cs *conState) getPercent(round int) (float64, error) {
+func (cs *conState) getVotePercent(round int) (float64, error) {
 	bitArray := strings.Split(cs.Result.RoundState.HeightVoteStep[round].PreVotesBitArray, " ")
+	if len(bitArray) < 3 {
+		return 0, errors.New("invalid bit array")
+	}
+	percent, err := strconv.ParseFloat(bitArray[len(bitArray)-1], 64)
+	if err != nil {
+		return 0, err
+	}
+	return percent, nil
+}
+
+func (cs *conState) getCommitPercent(round int) (float64, error) {
+	bitArray := strings.Split(cs.Result.RoundState.HeightVoteStep[round].PreCommitsBitArray, " ")
 	if len(bitArray) < 3 {
 		return 0, errors.New("invalid bit array")
 	}
@@ -52,28 +66,29 @@ func (cs *conState) getPercent(round int) (float64, error) {
 type VoteState struct {
 	Description string
 	Voted       bool
+	Committed    bool
 }
 
-func GetPreVotes(url string, names *ValNames) (votes []VoteState, percent float64, hrs string, dur time.Duration, err error) {
+func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePercent, commitPercent float64, hrs string, dur time.Duration, err error) {
 	votes = make([]VoteState, 0)
 	url = strings.TrimRight(strings.ReplaceAll(url, "tcp://", "http://"), "/")
 	resp, err := http.Get(url + "/consensus_state")
 	if err != nil {
-		return nil, 0, "", 0, err
+		return nil, 0, 0, "", 0, err
 	}
 	defer resp.Body.Close()
 	r, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, 0, "", 0, err
+		return nil, 0, 0, "", 0, err
 	}
 	state := &conState{}
 	err = json.Unmarshal(r, state)
 	if err != nil {
-		return nil, 0, "", 0, err
+		return nil, 0, 0, "", 0, err
 	}
 	round, err := state.getRound()
 	if err != nil {
-		return nil, 0, "", 0, err
+		return nil, 0, 0, "", 0, err
 	}
 	for i := range state.Result.RoundState.HeightVoteStep[round].Prevotes {
 		vote := state.Result.RoundState.HeightVoteStep[round].Prevotes[i]
@@ -86,10 +101,22 @@ func GetPreVotes(url string, names *ValNames) (votes []VoteState, percent float6
 			Voted:       voted,
 		})
 	}
-	percent, err = state.getPercent(round)
+	for i := range state.Result.RoundState.HeightVoteStep[round].Precommits {
+                commit := state.Result.RoundState.HeightVoteStep[round].Precommits[i]
+                committed := false
+                if commit != "nil-Vote" {
+                        committed = true
+                }
+		votes[i].Committed = committed
+        }
+	votePercent, err = state.getVotePercent(round)
 	if err != nil {
-		return nil, 0, "", 0, err
+		return nil, 0, 0, "", 0, err
+	}
+	commitPercent, err = state.getCommitPercent(round)
+	if err != nil {
+		return nil, 0, 0, "", 0, err
 	}
 	dur = time.Now().UTC().Sub(state.Result.RoundState.StartTime)
-	return votes, percent, state.Result.RoundState.HRS, dur, nil
+	return votes, votePercent, commitPercent, state.Result.RoundState.HRS, dur, nil
 }
