@@ -66,7 +66,8 @@ func (cs *conState) getCommitPercent(round int) (float64, error) {
 type VoteState struct {
 	Description string
 	Voted       bool
-	Committed    bool
+	VotedZeroes bool
+	Committed   bool
 }
 
 func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePercent, commitPercent float64, hrs string, dur time.Duration, err error) {
@@ -93,12 +94,19 @@ func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePerc
 	for i := range state.Result.RoundState.HeightVoteStep[round].Prevotes {
 		vote := state.Result.RoundState.HeightVoteStep[round].Prevotes[i]
 		voted := false
+		votedZeroes := false
 		if vote != "nil-Vote" {
 			voted = true
 		}
+
+		if strings.Contains(vote, "SIGNED_MSG_TYPE_PREVOTE(Prevote) 000000000000") {
+			votedZeroes = true
+		}
+
 		votes = append(votes, VoteState{
 			Description: names.GetInfo(i),
 			Voted:       voted,
+			VotedZeroes: votedZeroes,
 		})
 	}
 	for i := range state.Result.RoundState.HeightVoteStep[round].Precommits {

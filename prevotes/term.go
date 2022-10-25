@@ -79,6 +79,9 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 					if voter.Voted {
 						vmissing = "✅"
 					}
+					if voter.VotedZeroes {
+						vmissing = "🤷"
+					}
 					cmissing := "❌"
 					if voter.Committed {
 						cmissing = "✅"
