@@ -29,14 +29,15 @@ func main() {
 	}
 
 	voteChan := make(chan []prevotes.VoteState)
-	pctChan := make(chan float64)
+	votePctChan := make(chan float64)
+	commitPctChan := make(chan float64)
 	SummaryChan := make(chan string)
 
-	go prevotes.DrawScreen(networkName, voteChan, pctChan, SummaryChan)
+	go prevotes.DrawScreen(networkName, voteChan, votePctChan, commitPctChan, SummaryChan)
 
 	tick := time.NewTicker(refreshRate)
 	for range tick.C {
-		votes, pct, hrs, dur, e := prevotes.GetPreVotes(os.Args[1], v)
+		votes, votePct, commitPct, hrs, dur, e := prevotes.GetHeightVoteStep(os.Args[1], v)
 		if e != nil {
 			SummaryChan <- e.Error()
 			continue
@@ -44,8 +45,9 @@ func main() {
 		if dur < 0 {
 			dur = 0
 		}
-		SummaryChan <- fmt.Sprintf("height/round/step: %s - pct: %.0f%% (%v)\n", hrs, pct*100, dur)
+		SummaryChan <- fmt.Sprintf("height/round/step: %s - v: %.0f%% c: %.0f%% (%v)\n", hrs, votePct*100, commitPct*100, dur)
 		voteChan <- votes
-		pctChan <- pct
+		votePctChan <- votePct
+		commitPctChan <- commitPct
 	}
 }
