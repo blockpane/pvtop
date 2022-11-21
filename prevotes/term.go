@@ -2,11 +2,12 @@ package prevotes
 
 import (
 	"fmt"
-	ui "github.com/gizak/termui/v3"
-	"github.com/gizak/termui/v3/widgets"
 	"log"
 	"os"
 	"time"
+
+	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
 )
 
 func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPctChan chan float64, summaryChan chan string) {

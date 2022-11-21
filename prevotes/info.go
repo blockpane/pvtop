@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -30,39 +32,48 @@ type ValNames struct {
 	key    map[string]int // pubkey -> position
 	indice map[int]string // index -> moniker
 	power  map[int]float64
+
+	addr string
 }
 
-func GetValNames(addr string) *ValNames {
-	addr = strings.Replace(addr, "tcp://", "http://", 1)
-	httpAddr := strings.TrimRight(addr, "/")
+func NewValNamesWithAddr(addr string) *ValNames {
 	v := &ValNames{
 		key:    make(map[string]int),
 		indice: make(map[int]string),
 		power:  make(map[int]float64),
+		addr:   addr,
 	}
+	return v
+}
+
+func (v *ValNames) Update() error {
+	addr := strings.Replace(v.addr, "tcp://", "http://", 1)
+	httpAddr := strings.TrimRight(addr, "/")
 
 	perPage := 100
 	page := 1
 	index := 0
-	more := true
 
-	for more {
-		resp, err := http.Get(httpAddr + "/validators?per_page=" + strconv.Itoa(perPage) + "&page=" + strconv.Itoa(page))
+	hclient := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	for {
+		resp, err := hclient.Get(httpAddr + "/validators?per_page=" + strconv.Itoa(perPage) + "&page=" + strconv.Itoa(page))
 		if err != nil {
 			log.Println(err)
-			continue
+			return err
 		}
 		r, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			log.Println(err)
-			continue
+			return err
 		}
 		valResp := &rpcValidatorsResp{}
 		err = json.Unmarshal(r, valResp)
 		if err != nil {
 			log.Println(err)
-			continue
+			return err
 		}
 
 		for _, val := range valResp.Result.Validators {
@@ -75,32 +86,31 @@ func GetValNames(addr string) *ValNames {
 		if index < totalVals {
 			page += 1
 		} else {
-			more = false
+			break
 		}
 	}
 
 	page = 1
 	index = 0
-	more = true
 
 	// do it again, but get the % of voting power
-	for more {
-		resp, err := http.Get(httpAddr + "/validators?per_page=" + strconv.Itoa(perPage) + "&page=" + strconv.Itoa(page))
+	for {
+		resp, err := hclient.Get(httpAddr + "/validators?per_page=" + strconv.Itoa(perPage) + "&page=" + strconv.Itoa(page))
 		if err != nil {
 			log.Println(err)
-			continue
+			return err
 		}
 		r, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			log.Println(err)
-			continue
+			return err
 		}
 		valResp := &rpcValidatorsResp{}
 		err = json.Unmarshal(r, valResp)
 		if err != nil {
 			log.Println(err)
-			continue
+			return err
 		}
 
 		for _, val := range valResp.Result.Validators {
@@ -112,11 +122,11 @@ func GetValNames(addr string) *ValNames {
 		if index < totalVals {
 			page += 1
 		} else {
-			more = false
+			break
 		}
 	}
 
-	client, err := rpchttp.New(addr, "/websocket")
+	client, err := rpchttp.NewWithTimeout(addr, "/websocket", 2)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,19 +141,19 @@ func GetValNames(addr string) *ValNames {
 		q, e := valsQuery.Marshal()
 		if e != nil {
 			log.Println(e)
-			continue
+			return err
 		}
 		valsResult, e := client.ABCIQuery(context.Background(), "/cosmos.staking.v1beta1.Query/Validators", q)
 		if e != nil {
 			log.Println(e)
-			continue
+			return err
 		}
 		if len(valsResult.Response.Value) > 0 {
 			valsResp := staketypes.QueryValidatorsResponse{}
 			e = valsResp.Unmarshal(valsResult.Response.Value)
 			if e != nil {
 				log.Println(e)
-				continue
+				return err
 			}
 			for _, val := range valsResp.Validators {
 				annoyed := make(map[string]interface{})
@@ -163,7 +173,7 @@ func GetValNames(addr string) *ValNames {
 		}
 	}
 
-	return v
+	return nil
 }
 
 func (v *ValNames) setKey(key string, position int) {
