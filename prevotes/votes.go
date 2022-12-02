@@ -3,6 +3,7 @@ package prevotes
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -39,16 +40,31 @@ func (cs *conState) getRound() (int, error) {
 	return r, nil
 }
 
+func getPercent(equation string) (float64, error) {
+	// equation example: 421849654/633993401
+	if len(equation) < 2 {
+		return 0, errors.New("invalid equation")
+	}
+
+	var dividend, divisor int64
+	parsed, err := fmt.Sscanf(equation, "%d/%d", &dividend, &divisor)
+	if err != nil {
+		return 0, err
+	}
+
+	if parsed != 2 {
+		return 0, errors.New("invalid equation")
+	}
+
+	return float64(dividend) / float64(divisor), nil
+}
+
 func (cs *conState) getVotePercent(round int) (float64, error) {
 	bitArray := strings.Split(cs.Result.RoundState.HeightVoteStep[round].PreVotesBitArray, " ")
 	if len(bitArray) < 3 {
 		return 0, errors.New("invalid bit array")
 	}
-	percent, err := strconv.ParseFloat(bitArray[len(bitArray)-1], 64)
-	if err != nil {
-		return 0, err
-	}
-	return percent, nil
+	return getPercent(bitArray[len(bitArray)-3])
 }
 
 func (cs *conState) getCommitPercent(round int) (float64, error) {
@@ -56,11 +72,7 @@ func (cs *conState) getCommitPercent(round int) (float64, error) {
 	if len(bitArray) < 3 {
 		return 0, errors.New("invalid bit array")
 	}
-	percent, err := strconv.ParseFloat(bitArray[len(bitArray)-1], 64)
-	if err != nil {
-		return 0, err
-	}
-	return percent, nil
+	return getPercent(bitArray[len(bitArray)-3])
 }
 
 type VoteState struct {
@@ -110,13 +122,13 @@ func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePerc
 		})
 	}
 	for i := range state.Result.RoundState.HeightVoteStep[round].Precommits {
-                commit := state.Result.RoundState.HeightVoteStep[round].Precommits[i]
-                committed := false
-                if commit != "nil-Vote" {
-                        committed = true
-                }
+		commit := state.Result.RoundState.HeightVoteStep[round].Precommits[i]
+		committed := false
+		if commit != "nil-Vote" {
+			committed = true
+		}
 		votes[i].Committed = committed
-        }
+	}
 	votePercent, err = state.getVotePercent(round)
 	if err != nil {
 		return nil, 0, 0, "", 0, err

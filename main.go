@@ -65,7 +65,7 @@ func main() {
 		if dur < 0 {
 			dur = 0
 		}
-		SummaryChan <- fmt.Sprintf("height/round/step: %s - v: %.0f%% c: %.0f%% (%v)\n", hrs, votePct*100, commitPct*100, dur)
+		SummaryChan <- fmt.Sprintf("height/round/step: %s - v: %.2f%% c: %.2f%% (%v)\n", hrs, votePct*100, commitPct*100, dur)
 		voteChan <- votes
 		votePctChan <- votePct
 		commitPctChan <- commitPct
