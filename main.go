@@ -2,28 +2,48 @@ package main
 
 import (
 	"fmt"
-	"github.com/blockpane/pvtop/prevotes"
 	"log"
 	"os"
 	"time"
+
+	"github.com/blockpane/pvtop/prevotes"
 )
 
 const refreshRate = time.Second
 
+func printHelp() {
+	log.Printf("\n\tSyntax: pvtop [chainRpcHost] [providerRpcHost]\n\tchainRpcHost and providerRpcHost formatted as tcp://127.0.0.0:26657\n\tproviderRpcHost only required for consumer chains (typically only cosmoshub)")
+}
 func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 
 	if len(os.Args) < 2 {
-		log.Fatal("please provide an rpc endpoint as the only argument")
+		printHelp()
+		log.Fatal("Exiting")
 	}
 
-	networkName, err := prevotes.GetNetworkName(os.Args[1])
+	rpcHost := os.Args[1]
+	providerHost := os.Args[1]
+
+	// A provider must be specified when targeting a consumer chain
+	if len(os.Args) == 3 {
+		providerHost = os.Args[2]
+	}
+
+	networkName, err := prevotes.GetNetworkName(rpcHost)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Please wait, getting validator information....")
-	v := prevotes.GetValNames(os.Args[1])
+	// Only the provider host has validator name information
+	log.Println("Chain RPC Host: ", rpcHost)
+	log.Println("Provider Host: ", providerHost)
+	log.Println("Please wait, getting validator information....")
+	log.Println("\tIf stalled here:")
+	log.Println("\tNormal Chains: Check connectivity to RPC Host")
+	log.Println("\tConsumer Chains: Specify and check connectivity to Provider RPC Host")
+	printHelp()
+	v := prevotes.GetValNames(providerHost)
 	if v == nil {
 		log.Fatal("no validators found")
 	}
@@ -37,7 +57,7 @@ func main() {
 
 	tick := time.NewTicker(refreshRate)
 	for range tick.C {
-		votes, votePct, commitPct, hrs, dur, e := prevotes.GetHeightVoteStep(os.Args[1], v)
+		votes, votePct, commitPct, hrs, dur, e := prevotes.GetHeightVoteStep(rpcHost, v)
 		if e != nil {
 			SummaryChan <- e.Error()
 			continue
