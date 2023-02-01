@@ -21,7 +21,6 @@ func main() {
 	if fastPolling {
 		refreshRate = 250 * time.Millisecond
 	}
-	fmt.Println(flag.Args())
 
 	if len(flag.Args()) < 1 {
 		printHelp()
