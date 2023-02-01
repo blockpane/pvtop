@@ -1,33 +1,38 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/blockpane/pvtop/prevotes"
 )
 
-const refreshRate = time.Second
+var refreshRate = time.Second
 
-func printHelp() {
-	log.Printf("\n\tSyntax: pvtop [chainRpcHost] [providerRpcHost]\n\tchainRpcHost and providerRpcHost formatted as tcp://127.0.0.0:26657\n\tproviderRpcHost only required for consumer chains (typically only cosmoshub)")
-}
 func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 
-	if len(os.Args) < 2 {
+	var fastPolling bool
+	flag.BoolVar(&fastPolling, "fast", false, "fast polling mode, only use if you have a fast connection to the chain")
+	flag.Parse()
+
+	if fastPolling {
+		refreshRate = 250 * time.Millisecond
+	}
+
+	if len(flag.Args()) < 1 {
 		printHelp()
 		log.Fatal("Exiting")
 	}
 
-	rpcHost := os.Args[1]
-	providerHost := os.Args[1]
+	rpcHost := flag.Arg(0)
+	providerHost := flag.Arg(0)
 
 	// A provider must be specified when targeting a consumer chain
-	if len(os.Args) == 3 {
-		providerHost = os.Args[2]
+	if len(flag.Args()) == 2 {
+		providerHost = flag.Arg(1)
 	}
 
 	networkName, err := prevotes.GetNetworkName(rpcHost)
@@ -57,7 +62,7 @@ func main() {
 
 	tick := time.NewTicker(refreshRate)
 	for range tick.C {
-		votes, votePct, commitPct, hrs, dur, e := prevotes.GetHeightVoteStep(rpcHost, v)
+		votes, votePct, commitPct, hrs, dur, propIdx, e := prevotes.GetHeightVoteStep(rpcHost, v)
 		if e != nil {
 			SummaryChan <- e.Error()
 			continue
@@ -65,9 +70,21 @@ func main() {
 		if dur < 0 {
 			dur = 0
 		}
-		SummaryChan <- fmt.Sprintf("height/round/step: %s - v: %.0f%% c: %.0f%% (%v)\n", hrs, votePct*100, commitPct*100, dur)
+		proposer := "error getting proposer"
+		if propIdx >= 0 {
+			proposer = v.GetInfo(propIdx)
+		}
+		SummaryChan <- fmt.Sprintf("height/round/step: %s - v: %.0f%% c: %.0f%% (%v)\n\nProposer:\n(rank/%%/moniker) %s", hrs, votePct*100, commitPct*100, dur, proposer)
 		voteChan <- votes
 		votePctChan <- votePct
 		commitPctChan <- commitPct
 	}
+}
+
+func printHelp() {
+	log.Printf("\n\tSyntax: pvtop <flags> [chainRpcHost] [providerRpcHost]\n" +
+		"\tchainRpcHost and providerRpcHost formatted as tcp://127.0.0.0:26657\n" +
+		"\tproviderRpcHost only required for consumer chains (typically only cosmoshub)\n\n" +
+		"\tflags:\n" +
+		"\t\t'-fast' to enable fast polling, at 250ms interval (not recommended)\n")
 }

@@ -23,6 +23,9 @@ type conState struct {
 			HRS            string    `json:"height/round/step"`
 			HeightVoteStep []Hvs     `json:"height_vote_set"`
 			StartTime      time.Time `json:"start_time"`
+			Proposer       struct{
+				Index int `json:"index"`
+			}  `json:"proposer"`
 		} `json:"round_state"`
 	} `json:"result"`
 }
@@ -70,26 +73,26 @@ type VoteState struct {
 	Committed   bool
 }
 
-func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePercent, commitPercent float64, hrs string, dur time.Duration, err error) {
+func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePercent, commitPercent float64, hrs string, dur time.Duration, proposer int, err error) {
 	votes = make([]VoteState, 0)
 	url = strings.TrimRight(strings.ReplaceAll(url, "tcp://", "http://"), "/")
 	resp, err := http.Get(url + "/consensus_state")
 	if err != nil {
-		return nil, 0, 0, "", 0, err
+		return nil, 0, 0, "", 0, -1, err
 	}
 	defer resp.Body.Close()
 	r, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, 0, 0, "", 0, err
+		return nil, 0, 0, "", 0, -1, err
 	}
 	state := &conState{}
 	err = json.Unmarshal(r, state)
 	if err != nil {
-		return nil, 0, 0, "", 0, err
+		return nil, 0, 0, "", 0, -1, err
 	}
 	round, err := state.getRound()
 	if err != nil {
-		return nil, 0, 0, "", 0, err
+		return nil, 0, 0, "", 0, -1, err
 	}
 	for i := range state.Result.RoundState.HeightVoteStep[round].Prevotes {
 		vote := state.Result.RoundState.HeightVoteStep[round].Prevotes[i]
@@ -119,12 +122,12 @@ func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePerc
         }
 	votePercent, err = state.getVotePercent(round)
 	if err != nil {
-		return nil, 0, 0, "", 0, err
+		return nil, 0, 0, "", 0, -1, err
 	}
 	commitPercent, err = state.getCommitPercent(round)
 	if err != nil {
-		return nil, 0, 0, "", 0, err
+		return nil, 0, 0, "", 0, -1, err
 	}
 	dur = time.Now().UTC().Sub(state.Result.RoundState.StartTime)
-	return votes, votePercent, commitPercent, state.Result.RoundState.HRS, dur, nil
+	return votes, votePercent, commitPercent, state.Result.RoundState.HRS, dur, state.Result.RoundState.Proposer.Index, nil
 }
