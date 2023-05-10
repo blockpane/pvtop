@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -147,13 +148,16 @@ func GetValNames(addr string) *ValNames {
 			}
 			for _, val := range valsResp.Validators {
 				annoyed := make(map[string]interface{})
-				e = yaml.Unmarshal([]byte(val.String()), &annoyed)
-				if e != nil {
-					log.Println(e)
+				err := yaml.Unmarshal([]byte(val.String()), &annoyed)
+				if err != nil {
+					log.Println(err)
 					continue
 				}
-				i := v.getByKey(annoyed["consensus_pubkey"].(map[string]interface{})["key"].(string))
-				v.setIndex(i, strings.TrimSpace(val.Description.Moniker))
+				i, ok := annoyed["consensus_pubkey"].(map[string]interface{})["key"].(string)
+				if !ok {
+					continue
+				}
+				v.setIndex(v.getByKey(i), strings.TrimSpace(val.Description.Moniker))
 			}
 			if len(valsResp.Pagination.GetNextKey()) > 0 {
 				offset += 1
@@ -203,9 +207,10 @@ func (v *ValNames) getByIndex(index int) string {
 
 func (v *ValNames) getPower(index int) float64 {
 	v.mux.RLock()
+
 	defer v.mux.RUnlock()
 
-	return float64(v.power[index]) / 100
+	return v.power[index] / 100
 }
 
 func (v *ValNames) GetInfo(index int) string {
@@ -215,7 +220,6 @@ func (v *ValNames) GetInfo(index int) string {
 	}
 	if len([]byte(moniker)) > len(moniker) {
 		moniker = moniker[:len([]byte(moniker))-len(moniker)]
-
 	}
 	return fmt.Sprintf("%-3d %-.2f%%   %-20s ", index+1, v.getPower(index)*100.0, moniker)
 }
