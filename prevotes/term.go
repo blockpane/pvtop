@@ -120,9 +120,10 @@ func splitVotes(votes []VoteState) ([][]VoteState, int) {
 		split = append(split, votes[50:])
 	default:
 		max = 3
-		split = append(split, votes[:50])
-		split = append(split, votes[50:100])
-		split = append(split, votes[100:])
+		rows := (len(votes) + max - 1)/3
+		split = append(split, votes[:rows])
+		split = append(split, votes[rows:rows*2])
+		split = append(split, votes[rows*2:])
 	}
 	return split, max
 }
