@@ -49,7 +49,6 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 
 	for {
 		select {
-
 		case <-tick.C:
 			if !refresh {
 				continue
@@ -64,7 +63,11 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 				ui.Close()
 				os.Exit(0)
 			case "<Resize>":
-				payload := e.Payload.(ui.Resize)
+				payload, ok := e.Payload.(ui.Resize)
+				if !ok {
+					// handle error or continue, depending on your context
+					continue
+				}
 				grid.SetRect(0, 0, payload.Width, payload.Height)
 				ui.Clear()
 				ui.Render(grid)
@@ -102,7 +105,6 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 		case summary := <-summaryChan:
 			refresh = true
 			p.Text = summary
-
 		}
 	}
 }
@@ -120,7 +122,7 @@ func splitVotes(votes []VoteState) ([][]VoteState, int) {
 		split = append(split, votes[50:])
 	default:
 		max = 3
-		rows := (len(votes) + max - 1)/3
+		rows := (len(votes) + max - 1) / 3
 		split = append(split, votes[:rows])
 		split = append(split, votes[rows:rows*2])
 		split = append(split, votes[rows*2:])

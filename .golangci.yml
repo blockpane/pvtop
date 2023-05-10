@@ -1,0 +1,49 @@
+run:
+  tests: true
+  timeout: 5m
+  allow-parallel-runners: true
+
+output:
+  sort: true
+
+linters:
+  disable-all: true
+  # Enable specific linter
+  # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
+  enable:
+    - asciicheck
+    - bidichk
+    - depguard
+    - durationcheck
+    - errcheck
+    - errname
+    - exportloopref
+    - forcetypeassert
+    - goconst
+    - gofumpt
+    - goheader
+    - gomodguard
+    - goprintffuncname
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - makezero
+    - misspell
+    - nakedret
+    - nilnil
+    - promlinter
+    - staticcheck
+    - stylecheck
+    - tenv
+    - thelper
+    - tparallel
+    - typecheck
+    - thelper
+    - unconvert
+    - unused
+    - whitespace
+
+issues:
+  max-issues-per-linter: 10000
+  max-same-issues: 10000

@@ -23,9 +23,9 @@ type conState struct {
 			HRS            string    `json:"height/round/step"`
 			HeightVoteStep []Hvs     `json:"height_vote_set"`
 			StartTime      time.Time `json:"start_time"`
-			Proposer       struct{
+			Proposer       struct {
 				Index int `json:"index"`
-			}  `json:"proposer"`
+			} `json:"proposer"`
 		} `json:"round_state"`
 	} `json:"result"`
 }
@@ -113,13 +113,13 @@ func GetHeightVoteStep(url string, names *ValNames) (votes []VoteState, votePerc
 		})
 	}
 	for i := range state.Result.RoundState.HeightVoteStep[round].Precommits {
-                commit := state.Result.RoundState.HeightVoteStep[round].Precommits[i]
-                committed := false
-                if commit != "nil-Vote" {
-                        committed = true
-                }
+		commit := state.Result.RoundState.HeightVoteStep[round].Precommits[i]
+		committed := false
+		if commit != "nil-Vote" {
+			committed = true
+		}
 		votes[i].Committed = committed
-        }
+	}
 	votePercent, err = state.getVotePercent(round)
 	if err != nil {
 		return nil, 0, 0, "", 0, -1, err
