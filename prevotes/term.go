@@ -63,6 +63,18 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 				ui.Clear()
 				ui.Close()
 				os.Exit(0)
+			case "j", "<Down>":
+				for _, list := range lists {
+					if len(list.Rows) > 0 {
+						list.ScrollBottom()
+					}
+				}
+			case "k", "<Up>":
+				for _, list := range lists {
+					if len(list.Rows) > 0 {
+						list.ScrollTop()
+					}
+				}
 			case "<Resize>":
 				payload := e.Payload.(ui.Resize)
 				grid.SetRect(0, 0, payload.Width, payload.Height)
@@ -72,9 +84,9 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 
 		case votes := <-voteChan:
 			refresh = true
-			split, max := splitVotes(votes)
-			for i := 0; i < max; i++ {
-				lists[i].Rows = make([]string, len(split[i]))
+			split, columns, rows := splitVotes(votes)
+			for i := 0; i < columns; i++ {
+				lists[i].Rows = make([]string, rows)
 				for j, voter := range split[i] {
 					vmissing := "❌"
 					if voter.Voted {
@@ -107,23 +119,25 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 	}
 }
 
-func splitVotes(votes []VoteState) ([][]VoteState, int) {
+func splitVotes(votes []VoteState) ([][]VoteState, int, int) {
 	split := make([][]VoteState, 0)
-	var max int
+	var columns int
+	var rows int = 50
+
 	switch {
 	case len(votes) < 50:
-		max = 1
+		columns = 1
 		split = append(split, votes)
 	case len(votes) < 100:
-		max = 2
+		columns = 2
 		split = append(split, votes[:50])
 		split = append(split, votes[50:])
 	default:
-		max = 3
-		rows := (len(votes) + max - 1)/3
+		columns = 3
+		rows = (len(votes) + columns - 1) / 3
 		split = append(split, votes[:rows])
 		split = append(split, votes[rows:rows*2])
 		split = append(split, votes[rows*2:])
 	}
-	return split, max
+	return split, columns, rows
 }
