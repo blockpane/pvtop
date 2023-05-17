@@ -109,15 +109,24 @@ func DrawScreen(network string, voteChan chan []VoteState, votePctChan, commitPc
 
 func splitVotes(votes []VoteState) ([][]VoteState, int) {
 	split := make([][]VoteState, 0)
+	_, termHeight := ui.TerminalDimensions()
+	validatorRows := termHeight - 10
+
 	var max int
 	switch {
-	case len(votes) < 50:
+	case validatorRows >= len(votes):
 		max = 1
 		split = append(split, votes)
-	case len(votes) < 100:
+	case validatorRows * 2 >= len(votes):
 		max = 2
-		split = append(split, votes[:50])
-		split = append(split, votes[50:])
+		if validatorRows >= 50 {
+			split = append(split, votes[:50])
+			split = append(split, votes[50:])
+		} else {
+			rows := (len(votes) + max - 1)/2
+			split = append(split, votes[:rows])
+			split = append(split, votes[rows:])
+		}
 	default:
 		max = 3
 		rows := (len(votes) + max - 1)/3

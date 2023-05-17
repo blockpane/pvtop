@@ -74,7 +74,7 @@ func main() {
 		if propIdx >= 0 {
 			proposer = v.GetInfo(propIdx)
 		}
-		SummaryChan <- fmt.Sprintf("height/round/step: %s - v: %.0f%% c: %.0f%% (%v)\n\nProposer:\n(rank/%%/moniker) %s", hrs, votePct*100, commitPct*100, dur, proposer)
+		SummaryChan <- fmt.Sprintf("height/round/step: %s - v: %.2f%% c: %.2f%% (%v)\n\nProposer:\n(rank/%%/moniker) %s", hrs, votePct*100, commitPct*100, dur, proposer)
 		voteChan <- votes
 		votePctChan <- votePct
 		commitPctChan <- commitPct
